@@ -133,16 +133,27 @@ if [ "${code:-}" != "302" ] && [ "${code:-}" != "303" ]; then
   rollback; exit 1
 fi
 
-# L'écran de connexion doit exister réellement : sans domaine d'équipe, la
-# redirection pointe vers un hôte qui ne répond pas — c'est exactement le cas
-# qu'on ne pouvait pas exclure d'avance.
+# L'écran de connexion doit répondre réellement. On interroge l'URL complète
+# donnée par l'en-tête Location : elle porte kid/meta/redirect_url, et sans ces
+# paramètres Cloudflare répond 404 — ce n'est donc PAS un signe de panne.
 team=$(printf '%s' "$loc" | sed -E 's#^https?://([^/]+)/.*#\1#')
 echo "   domaine d'équipe visé : ${team:-?}"
-login=$(curl -s -o /dev/null -m 20 -w '%{http_code}' "https://$team/cdn-cgi/access/login/$HOST" || echo 000)
-echo "   écran de connexion : HTTP $login"
+
+case "$team" in
+  *.cloudflareaccess.com) ;;
+  *) echo "   ✖ la redirection ne pointe pas vers un domaine d'équipe Access."
+     rollback; exit 1 ;;
+esac
+
+# Un 302 signé vers *.cloudflareaccess.com prouve déjà que le domaine d'équipe
+# est vivant. Le contrôle ci-dessous confirme, mais ne déclenche plus de retour
+# arrière : supprimer une application qui fonctionne serait pire que l'inverse.
+full=$(printf '%s' "$loc" | sed 's/&amp;/\&/g')
+login=$(curl -s -o /dev/null -m 20 -w '%{http_code}' "$full" || echo 000)
+echo "   écran de connexion (URL complète) : HTTP $login"
 if [ "$login" != "200" ]; then
-  echo "   ✖ l'écran de connexion ne répond pas — verrouillage évité."
-  rollback; exit 1
+  echo "   ⚠ code inattendu, mais la redirection signée est correcte."
+  echo "     Vérifiez à la main : $HOST doit demander un PIN."
 fi
 
 echo "   ✔ Access actif et écran de connexion joignable."

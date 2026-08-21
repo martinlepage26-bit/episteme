@@ -107,18 +107,16 @@ modèle que le tunnel `echo-clone-api` déjà en service sur ce compte.
   de démarrer si elles manquent. Seuls `/api/status` et `/api/auth/*` sont ouverts.
   La phrase de passe vit dans
   `~/.secrets/martin,ml@pharos-ai.ca,episteme.pharos-ai.ca-passphrase.txt` (perms 600).
-- **Cloudflare Access reste à poser** en amont du tunnel. Script prêt :
-  `scripts-ops/setup-cloudflare-access.sh` (crée l'application, la politique PIN à usage unique
-  pour `martinlepage.ai@gmail.com` et `ml@pharos-ai.ca`, vérifie la redirection, et documente le
-  rollback). Prérequis : un domaine d'équipe Zero Trust doit exister, sinon l'écran de connexion
-  Access ne peut pas aboutir. Ce serait une seconde barrière, au bord
-  du réseau plutôt qu'à l'origine, et donnerait une identité par personne au lieu d'un secret
-  partagé. Non fait ici : le seul jeton Cloudflare présent sur la machine
-  (`~/.secrets/martin,cloudflare,api-publicsurface.txt`) répond `Invalid API Token`, et aucun outil
-  Access n'est exposé. Le jeton de `~/.cloudflared/cert.pem` a été essayé : il lit les
-  applications Access, mais la création renvoie `1010` (portée insuffisante). Un jeton dédié
-  reste donc nécessaire. Il faut un jeton portant *Access: Apps and Policies — Edit* sur le compte
-  `Ml@pharos-ai.ca`, ou trois minutes dans le tableau de bord Zero Trust.
+- **Cloudflare Access** en amont du tunnel : domaine d'équipe Zero Trust confirmé
+  (`pharos-ai.cloudflareaccess.com`, compte `Martinlepage26@me.com`). Pose par
+  `scripts-ops/setup-cloudflare-access.sh` — application self-hosted sur `episteme.pharos-ai.ca`,
+  politique « allow » par PIN à usage unique pour `martinlepage.ai@gmail.com` et
+  `ml@pharos-ai.ca`, session 24 h. Le script exige un jeton portant
+  *Access: Apps and Policies — Edit* ; le jeton de `~/.cloudflared/cert.pem` ne suffit pas
+  (renvoie `1010`).
+
+  Access est une seconde barrière, au bord du réseau : l'authentification à l'origine reste
+  active en dessous, et retirer Access ne rouvre pas l'outil au public.
 
 Pour redéployer après un changement de code :
 
