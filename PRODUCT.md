@@ -107,7 +107,11 @@ modèle que le tunnel `echo-clone-api` déjà en service sur ce compte.
   de démarrer si elles manquent. Seuls `/api/status` et `/api/auth/*` sont ouverts.
   La phrase de passe vit dans
   `~/.secrets/martin,ml@pharos-ai.ca,episteme.pharos-ai.ca-passphrase.txt` (perms 600).
-- **Cloudflare Access reste à poser** en amont du tunnel. Ce serait une seconde barrière, au bord
+- **Cloudflare Access reste à poser** en amont du tunnel. Script prêt :
+  `scripts-ops/setup-cloudflare-access.sh` (crée l'application, la politique PIN à usage unique
+  pour `martinlepage.ai@gmail.com` et `ml@pharos-ai.ca`, vérifie la redirection, et documente le
+  rollback). Prérequis : un domaine d'équipe Zero Trust doit exister, sinon l'écran de connexion
+  Access ne peut pas aboutir. Ce serait une seconde barrière, au bord
   du réseau plutôt qu'à l'origine, et donnerait une identité par personne au lieu d'un secret
   partagé. Non fait ici : le seul jeton Cloudflare présent sur la machine
   (`~/.secrets/martin,cloudflare,api-publicsurface.txt`) répond `Invalid API Token`, et aucun outil
