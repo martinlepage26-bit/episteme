@@ -3,6 +3,7 @@ import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { connectDb, ensureIndexes } from "./db.js";
+import { accessEnabled } from "./lib/accessJwt.js";
 import { authEnabled, requireAuth } from "./lib/auth.js";
 import { auditRouter } from "./routes/audit.js";
 import { authRouter } from "./routes/auth.js";
@@ -19,9 +20,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");
 
 const requireAuthConfigured = process.env.EPISTEME_REQUIRE_AUTH === "1";
-if (requireAuthConfigured && !authEnabled) {
+if (requireAuthConfigured && !authEnabled && !accessEnabled) {
   console.error(
-    "EPISTEME_REQUIRE_AUTH=1 mais EPISTEME_PASSPHRASE / EPISTEME_SESSION_SECRET sont absents. Arrêt.",
+    "EPISTEME_REQUIRE_AUTH=1 mais aucun mécanisme n'est configuré : il faut soit Cloudflare Access " +
+      "(EPISTEME_ACCESS_TEAM_DOMAIN + EPISTEME_ACCESS_AUD), soit une phrase de passe " +
+      "(EPISTEME_PASSPHRASE + EPISTEME_SESSION_SECRET). Arrêt.",
   );
   process.exit(1);
 }
@@ -36,7 +39,7 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "10mb" }));
 
 app.get("/api/status", (_req, res) => {
-  res.json({ status: "ok", product: "Épistémè", phase: 2, authEnabled });
+  res.json({ status: "ok", product: "Épistémè", phase: 2, authEnabled, accessEnabled });
 });
 
 // Non protégé : c'est la porte d'entrée.
@@ -72,7 +75,7 @@ connectDb()
   .then(() => {
     app.listen(port, () => {
       console.log(
-        `Épistémè API sur http://localhost:${port} — authentification ${authEnabled ? "activée" : "DÉSACTIVÉE"}`,
+        `Épistémè API sur http://localhost:${port} — Access ${accessEnabled ? "activé" : "inactif"}, phrase de passe ${authEnabled ? "activée" : "inactive"}`,
       );
     });
   })

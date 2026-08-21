@@ -32,8 +32,24 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }
 
   const status = statusQuery.data;
-  if (status && (!status.authEnabled || status.authenticated)) {
+  if (status?.authenticated) {
     return <>{children}</>;
+  }
+
+  // Derrière Access sans session valide, redemander une phrase de passe serait
+  // un cul-de-sac : c'est Cloudflare qui doit réémettre l'identité.
+  if (status?.accessEnabled && !status.authEnabled) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <div className="w-full max-w-sm">
+          <h1 className="mb-1 font-serif text-3xl italic tracking-tight">Épistémè</h1>
+          <p className="mb-4 text-sm text-ink/50">Session Cloudflare Access expirée.</p>
+          <Button className="w-full justify-center" onClick={() => window.location.reload()}>
+            Se reconnecter
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   const submit = async (event: React.FormEvent) => {
@@ -58,6 +74,14 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         <p className="mb-6 text-sm text-ink/50">
           Outil de codage qualitatif auditable. Accès restreint.
         </p>
+
+        {status?.accessEnabled && (
+          <p className="mb-4 rounded-sm border border-ink/15 bg-ink/[0.03] px-3 py-2 text-xs text-ink/55">
+            Cette requête n'est pas passée par Cloudflare Access — accès direct à l'origine ou
+            session expirée. Par <span className="font-mono">episteme.pharos-ai.ca</span>, Access
+            authentifie et cet écran ne s'affiche pas.
+          </p>
+        )}
 
         <Label htmlFor="passphrase">Phrase de passe</Label>
         <Input

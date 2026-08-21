@@ -100,7 +100,14 @@ modèle que le tunnel `echo-clone-api` déjà en service sur ce compte.
   `Requires=episteme-api.service`.
 - MongoDB reste le conteneur local `docker-compose.yml` (`restart: unless-stopped`, port 27018) —
   Docker démarre au boot, donc la base survit à un redémarrage sans configuration additionnelle.
-- **Authentification à l'origine** : phrase de passe unique, cookie de session signé HMAC-SHA256
+- **Authentification à l'origine, Access d'abord** : si Cloudflare Access est en amont, l'origine
+  vérifie le JWT `Cf-Access-Jwt-Assertion` (signature RS256 contre le JWKS du domaine d'équipe,
+  `aud`, `iss`, `exp`) et considère la personne authentifiée — **aucune seconde connexion**.
+  L'adresse attestée sert de nom de codeur·e par défaut, de sorte que le journal d'audit porte une
+  identité vérifiée plutôt qu'un nom saisi. Configuré par `EPISTEME_ACCESS_TEAM_DOMAIN` et
+  `EPISTEME_ACCESS_AUD`. Un en-tête forgé est rejeté : signature, audience et émetteur sont
+  contrôlés.
+- **Phrase de passe, en repli** : phrase de passe unique, cookie de session signé HMAC-SHA256
   (`HttpOnly`, `Secure`, `SameSite=Lax`, 12 h), comparaison à temps constant, et limitation à
   8 tentatives par 10 min et par adresse. Configurée par `EPISTEME_PASSPHRASE` et
   `EPISTEME_SESSION_SECRET` dans `server/.env` ; avec `EPISTEME_REQUIRE_AUTH=1`, le serveur refuse

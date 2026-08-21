@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
+import { accessEnabled, readAccessToken, verifyAccessJwt } from "./accessJwt.js";
 
 const COOKIE_NAME = "episteme_session";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 h
@@ -74,17 +75,48 @@ export function clearedCookie(): string {
   return `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
 }
 
-export function isAuthenticated(req: Request): boolean {
-  if (!authEnabled) return true;
-  return verifyToken(parseCookies(req.headers.cookie)[COOKIE_NAME]);
+export type AuthMethod = "access" | "passphrase" | "open";
+
+export interface Identity {
+  method: AuthMethod;
+  email: string | null;
+}
+
+/**
+ * Ordre de résolution : Cloudflare Access d'abord.
+ *
+ * Quand Access est en amont, il a déjà authentifié la personne et le prouve par
+ * un JWT signé. Redemander une phrase de passe derrière ne renforce rien — un
+ * secret partagé en dit moins qu'une identité nominative — et impose une
+ * seconde connexion. La phrase de passe reste le repli pour l'accès direct à
+ * l'origine et le développement local.
+ */
+export async function resolveIdentity(req: Request): Promise<Identity | null> {
+  const cookies = parseCookies(req.headers.cookie);
+
+  if (accessEnabled) {
+    const identity = await verifyAccessJwt(
+      readAccessToken(req.headers as Record<string, unknown>, cookies),
+    );
+    if (identity) return { method: "access", email: identity.email };
+  }
+
+  if (!authEnabled) return { method: "open", email: null };
+  if (verifyToken(cookies[COOKIE_NAME])) return { method: "passphrase", email: null };
+  return null;
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (isAuthenticated(req)) {
-    next();
-    return;
-  }
-  res.status(401).json({ error: "Authentification requise" });
+  resolveIdentity(req)
+    .then((identity) => {
+      if (identity) {
+        res.locals.identity = identity;
+        next();
+        return;
+      }
+      res.status(401).json({ error: "Authentification requise" });
+    })
+    .catch(next);
 }
 
 /**

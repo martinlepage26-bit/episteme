@@ -170,7 +170,14 @@ export interface ComparisonResult {
   citations: CitationComparison[];
 }
 
+export type AuthMethod = "access" | "passphrase" | "open";
+
 export interface AuthStatus {
   authEnabled: boolean;
+  accessEnabled: boolean;
   authenticated: boolean;
+  /** Comment la session a été établie ; « access » = identité vérifiée par Cloudflare. */
+  method: AuthMethod | null;
+  /** Adresse attestée par Cloudflare Access, si c'est par là que ça passe. */
+  email: string | null;
 }

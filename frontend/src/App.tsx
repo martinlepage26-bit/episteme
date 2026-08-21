@@ -1,7 +1,8 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import SessionBar from "./components/SessionBar";
-import { Button, Input } from "./components/ui";
+import { Badge, Button, Input } from "./components/ui";
 import { api } from "./lib/api";
 import { useActiveSession, useCoder, useStance } from "./lib/useCoder";
 import AuditPage from "./pages/AuditPage";
@@ -27,6 +28,16 @@ export default function App() {
   const [stance, setStance] = useStance();
   const { session, setSession } = useActiveSession();
 
+  const authQuery = useQuery({ queryKey: ["auth-status"], queryFn: api.auth.status });
+  const identityEmail = authQuery.data?.method === "access" ? authQuery.data.email : null;
+
+  // Sous Access, l'identité est attestée : elle sert de nom de codeur·e par
+  // défaut, pour que le journal d'audit porte une personne vérifiée plutôt
+  // qu'un nom saisi à la main.
+  useEffect(() => {
+    if (identityEmail && !coder) setCoder(identityEmail);
+  }, [identityEmail, coder, setCoder]);
+
   // La session ouverte fait foi sur la posture : les pages de codage lisent
   // celle-ci, jamais la préférence locale, tant qu'une session est ouverte.
   const activeStance = session?.stance ?? stance;
@@ -34,6 +45,12 @@ export default function App() {
   const logout = async () => {
     await api.auth.logout();
     queryClient.clear();
+    // Sous Access, se déconnecter de l'origine ne suffit pas : c'est la session
+    // Cloudflare qui fait entrer.
+    if (authQuery.data?.method === "access") {
+      window.location.href = "/cdn-cgi/access/logout";
+      return;
+    }
     queryClient.invalidateQueries({ queryKey: ["auth-status"] });
   };
 
@@ -67,6 +84,9 @@ export default function App() {
               placeholder="votre nom"
               className="w-40"
             />
+            {identityEmail && (
+              <Badge className="max-w-[14rem] truncate" >{identityEmail}</Badge>
+            )}
             <Button variant="ghost" onClick={logout}>
               Quitter
             </Button>
