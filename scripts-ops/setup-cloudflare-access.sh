@@ -10,9 +10,9 @@
 #   Access: Apps and Policies — Edit   (obligatoire pour créer)
 #   Access: Organizations — Read       (pour vérifier le domaine d'équipe)
 #
-# Le jeton embarqué dans ~/.cloudflared/cert.pem sert de repli : il sait lire
-# les applications Access, mais PAS le domaine d'équipe — il ne suffit donc pas
-# à valider l'étape 1. Vérifié le 2026-08-21.
+# Le jeton embarqué dans ~/.cloudflared/cert.pem NE SUFFIT PAS : exécution du
+# 2026-08-21, il lit access/apps (0) mais la création renvoie 1010
+# (portée insuffisante). Il faut donc un jeton créé pour l'occasion.
 #
 # Non interactif : aucune invite, codes de sortie explicites.
 set -euo pipefail
@@ -92,7 +92,12 @@ import json,sys;print(json.dumps({
 APP_ID=$(printf '%s' "$APP" | python3 -c "
 import sys,json;d=json.load(sys.stdin)
 if not d.get('success'):
-    [print('   ERREUR',e.get('code'),e.get('message'),file=sys.stderr) for e in d.get('errors',[])]
+    for e in d.get('errors',[]):
+        code=e.get('code'); msg=e.get('message') or e.get('error_chain',[{}])[0].get('message') or repr(e)
+        print(f'   ERREUR {code}: {msg}',file=sys.stderr)
+        if code==1010:
+            print('   → le jeton n\'a pas « Access: Apps and Policies — Edit ».',file=sys.stderr)
+            print('     Créez-en un : dash.cloudflare.com → My Profile → API Tokens.',file=sys.stderr)
     sys.exit(1)
 print(d['result']['id'])") || exit 1
 echo "   ✔ app id : $APP_ID"

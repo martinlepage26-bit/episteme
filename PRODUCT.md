@@ -115,7 +115,9 @@ modèle que le tunnel `echo-clone-api` déjà en service sur ce compte.
   du réseau plutôt qu'à l'origine, et donnerait une identité par personne au lieu d'un secret
   partagé. Non fait ici : le seul jeton Cloudflare présent sur la machine
   (`~/.secrets/martin,cloudflare,api-publicsurface.txt`) répond `Invalid API Token`, et aucun outil
-  Access n'est exposé. Il faut un jeton portant *Access: Apps and Policies — Edit* sur le compte
+  Access n'est exposé. Le jeton de `~/.cloudflared/cert.pem` a été essayé : il lit les
+  applications Access, mais la création renvoie `1010` (portée insuffisante). Un jeton dédié
+  reste donc nécessaire. Il faut un jeton portant *Access: Apps and Policies — Edit* sur le compte
   `Ml@pharos-ai.ca`, ou trois minutes dans le tableau de bord Zero Trust.
 
 Pour redéployer après un changement de code :
