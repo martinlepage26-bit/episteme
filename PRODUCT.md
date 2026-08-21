@@ -122,6 +122,22 @@ modèle que le tunnel `echo-clone-api` déjà en service sur ce compte.
   *Access: Apps and Policies — Edit* ; le jeton de `~/.cloudflared/cert.pem` ne suffit pas
   (renvoie `1010`).
 
+  **Défaut connu, côté compte (pas côté Épistémè).** Le domaine d'équipe propose quatre
+  fournisseurs d'identité — trois GitHub en double et un Google — dont les liens OAuth portent
+  `client_id=martinlepage26%40me.com`. Un identifiant client OAuth n'est jamais une adresse
+  e-mail : ces quatre fournisseurs sont mal configurés et renvoient une erreur 500 Cloudflare
+  quand on les choisit. L'application Épistémè laisse `allowed_idps` vide, donc elle les propose
+  tous.
+
+  **Chemin qui fonctionne** : « Email » → « Send login code » (PIN à usage unique). Vérifié le
+  2026-08-21 : soumission propre, page de saisie du code, aucune réponse ≥ 400.
+
+  **Correctif propre** : restreindre `allowed_idps` au seul PIN à usage unique, pour que les
+  boutons cassés disparaissent. Demande un jeton portant
+  *Access: Organizations, Identity Providers, and Groups — Read* : le jeton actuel renvoie une
+  liste de fournisseurs **vide** alors que quatre existent — piège de portée déjà rencontré sur
+  `access/apps`.
+
   **Posé le 2026-08-21** — application `e43968d9-fcd1-496f-bcaa-c3c978ddb6ac`, politique
   « Martin uniquement ». Le bord répond 302 vers `pharos-ai.cloudflareaccess.com`. Jeton conservé
   dans `~/.secrets/martin,ml@pharos-ai.ca,cloudflare-access-apps-edit.txt` (perms 600).
