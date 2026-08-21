@@ -122,14 +122,25 @@ print('   ✔ application supprimée, le site est rendu à son état précédent
       else '   ✖ ÉCHEC DU RETOUR ARRIÈRE — supprimez à la main : '+str([e.get('message') for e in d.get('errors',[])]))"
 }
 
-sleep 6
-HDRS=$(curl -s -o /dev/null -D - -m 20 "https://$HOST/" || true)
-code=$(printf '%s' "$HDRS" | awk '/^HTTP/{c=$2} END{print c}')
-loc=$(printf '%s' "$HDRS"  | awk 'tolower($1)=="location:"{print $2}' | tr -d '\r')
-echo "   HTTP ${code:-?}   location: ${loc:--}"
+# La propagation d'une règle Access au bord n'est pas instantanée et sa durée
+# varie. On sonde jusqu'à 90 s avant de conclure : un rollback déclenché sur une
+# course de propagation supprimerait une application parfaitement valide.
+code=""; loc=""
+for attempt in $(seq 1 30); do
+  HDRS=$(curl -s -o /dev/null -D - -m 15 "https://$HOST/" || true)
+  code=$(printf '%s' "$HDRS" | awk '/^HTTP/{c=$2} END{print c}')
+  loc=$(printf '%s' "$HDRS"  | awk 'tolower($1)=="location:"{print $2}' | tr -d '\r')
+  if [ "$code" = "302" ] || [ "$code" = "303" ]; then
+    echo "   HTTP $code après $((attempt*3))s"
+    break
+  fi
+  printf '\r   attente de propagation… %ss (HTTP %s)' "$((attempt*3))" "${code:-?}"
+  sleep 3
+done
+echo
 
-if [ "${code:-}" != "302" ] && [ "${code:-}" != "303" ]; then
-  echo "   ✖ Access n'intercepte pas (attendu 302/303)."
+if [ "$code" != "302" ] && [ "$code" != "303" ]; then
+  echo "   ✖ Access n'intercepte toujours pas après 90 s (HTTP ${code:-?})."
   rollback; exit 1
 fi
 

@@ -115,8 +115,16 @@ modèle que le tunnel `echo-clone-api` déjà en service sur ce compte.
   *Access: Apps and Policies — Edit* ; le jeton de `~/.cloudflared/cert.pem` ne suffit pas
   (renvoie `1010`).
 
+  **Posé le 2026-08-21** — application `e43968d9-fcd1-496f-bcaa-c3c978ddb6ac`, politique
+  « Martin uniquement ». Le bord répond 302 vers `pharos-ai.cloudflareaccess.com`. Jeton conservé
+  dans `~/.secrets/martin,ml@pharos-ai.ca,cloudflare-access-apps-edit.txt` (perms 600).
+
   Access est une seconde barrière, au bord du réseau : l'authentification à l'origine reste
   active en dessous, et retirer Access ne rouvre pas l'outil au public.
+
+  Piège constaté : le jeton de `~/.cloudflared/cert.pem` renvoie une liste **vide** sur
+  `access/apps` alors que le compte en contient trois. Une lecture vide avec ce jeton ne prouve
+  donc rien — c'est un défaut de portée, pas un état réel.
 
 Pour redéployer après un changement de code :
 
