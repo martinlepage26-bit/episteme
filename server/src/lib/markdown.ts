@@ -1,3 +1,5 @@
+import { DECISION_LABELS, STANCE_LABELS, type ReconciliationDecision, type Stance } from "../types.js";
+
 interface CodeView {
   id: string;
   code: string;
@@ -35,9 +37,22 @@ interface CodingEventView {
   citationId: string;
   codeId: string;
   coder: string;
+  stance: Stance;
   memo: string;
+  memoCode: string | null;
   createdAt: string;
   revoked: boolean;
+}
+
+interface ReconciliationView {
+  id: string;
+  code: string;
+  citationId: string;
+  decision: ReconciliationDecision;
+  finalCodeIds: string[];
+  motif: string;
+  reconciledBy: string;
+  reconciledAt: string;
 }
 
 export function buildCodebookMarkdown(codes: CodeView[]): string {
@@ -81,9 +96,12 @@ export function buildQuotationBookMarkdown(
   documents: DocumentView[],
   codingEvents: CodingEventView[],
   codes: CodeView[],
+  reconciliations: ReconciliationView[] = [],
 ): string {
   const documentById = new Map(documents.map((d) => [d.id, d]));
   const codeById = new Map(codes.map((c) => [c.id, c]));
+  const reconciliationByCitation = new Map(reconciliations.map((r) => [r.citationId, r]));
+
   const eventsByCitation = new Map<string, CodingEventView[]>();
   for (const event of codingEvents) {
     if (!eventsByCitation.has(event.citationId)) eventsByCitation.set(event.citationId, []);
@@ -97,6 +115,24 @@ export function buildQuotationBookMarkdown(
     "",
   ];
 
+  const renderPass = (stance: Stance, events: CodingEventView[]) => {
+    const passEvents = events.filter((e) => e.stance === stance);
+    lines.push(`**Passe ${stance} — ${STANCE_LABELS[stance]} :**`, "");
+    if (passEvents.length === 0) {
+      lines.push("- aucun codage", "");
+      return;
+    }
+    for (const event of passEvents) {
+      const code = codeById.get(event.codeId);
+      lines.push(
+        `- ${code ? `${code.code} « ${code.name} »` : event.codeId} · codeur ${event.coder} · ${event.createdAt}${
+          event.memo ? ` · interprétation${event.memoCode ? ` (${event.memoCode})` : ""} : ${event.memo}` : ""
+        }`,
+      );
+    }
+    lines.push("");
+  };
+
   for (const citation of citations) {
     const document = documentById.get(citation.documentId);
     const events = (eventsByCitation.get(citation.id) ?? []).filter((e) => !e.revoked);
@@ -109,19 +145,29 @@ export function buildQuotationBookMarkdown(
     lines.push(`**Texte :** « ${citation.text} »`, "");
     lines.push(`**Codeur (citation) :** ${citation.createdBy} · ${citation.createdAt}`, "");
 
-    if (events.length === 0) {
-      lines.push("**Codes appliqués :** aucun", "");
-    } else {
-      lines.push("**Codes appliqués :**", "");
-      for (const event of events) {
-        const code = codeById.get(event.codeId);
-        lines.push(
-          `- ${code ? `${code.code} « ${code.name} »` : event.codeId} · codeur ${event.coder} · ${event.createdAt}${
-            event.memo ? ` · mémo : ${event.memo}` : ""
-          }`,
-        );
-      }
-      lines.push("");
+    renderPass("A", events);
+    renderPass("B", events);
+
+    const idsA = [...new Set(events.filter((e) => e.stance === "A").map((e) => e.codeId))];
+    const idsB = [...new Set(events.filter((e) => e.stance === "B").map((e) => e.codeId))];
+    const divergent =
+      idsA.length > 0 && idsB.length > 0 && !(idsA.length === idsB.length && idsA.every((id) => idsB.includes(id)));
+
+    const reconciliation = reconciliationByCitation.get(citation.id);
+    if (reconciliation) {
+      const finalNames = reconciliation.finalCodeIds
+        .map((id) => {
+          const code = codeById.get(id);
+          return code ? `${code.code} « ${code.name} »` : id;
+        })
+        .join(" ; ");
+      lines.push(`**Réconciliation ${reconciliation.code} :**`, "");
+      lines.push(`- Décision : ${DECISION_LABELS[reconciliation.decision]}`);
+      lines.push(`- Codage final : ${finalNames || "—"}`);
+      lines.push(`- Motif : ${reconciliation.motif}`);
+      lines.push(`- Réconcilié par ${reconciliation.reconciledBy} le ${reconciliation.reconciledAt}`, "");
+    } else if (divergent) {
+      lines.push("**STATUT : non réconcilié**", "");
     }
 
     lines.push("---", "");

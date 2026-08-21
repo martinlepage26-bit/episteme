@@ -3,7 +3,8 @@
 Outil de codage qualitatif auditable. Voir `SPEC.md` (spécification complète) et `PRODUCT.md`
 (portée de cette itération, choix de stack, déploiement).
 
-**Live :** https://episteme.pharos-ai.ca (interim, CT920, sans authentification — voir `PRODUCT.md`).
+**Live :** https://episteme.pharos-ai.ca (interim, CT920). Accès par phrase de passe — voir
+`PRODUCT.md`.
 
 ## Démarrer en local
 
@@ -14,8 +15,12 @@ npm install                    # installe concurrently à la racine
 npm --prefix server install
 npm --prefix frontend install
 
-npm run dev                    # lance MongoDB (docker), l'API (:4000) et le frontend (:5173)
+npm --prefix server run migrate  # chaîne les événements d'audit existants et crée les index
+npm run dev                      # lance MongoDB (docker), l'API (:4000) et le frontend (:5173)
 ```
+
+En local, l'authentification est inactive tant que `EPISTEME_PASSPHRASE` et
+`EPISTEME_SESSION_SECRET` sont absents de `server/.env` (voir `server/.env.example`).
 
 Ou séparément, dans trois terminaux :
 
@@ -33,6 +38,9 @@ développement (voir `frontend/vite.config.ts`).
 ```
 episteme/
 ├── server/      API Node.js + TypeScript + Express + MongoDB
+│   └── src/lib/audit.ts    journal append-only chaîné en SHA-256
 ├── frontend/    App React + TypeScript + Vite + Tailwind
 └── docker-compose.yml   MongoDB local (port 27018)
 ```
+
+Écrans : `/corpus` `/coding/:id` `/codebook` `/compare` `/reconcile` `/audit` `/exports`.

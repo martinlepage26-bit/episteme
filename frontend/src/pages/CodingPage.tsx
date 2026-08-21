@@ -4,8 +4,17 @@ import { Link, useParams } from "react-router-dom";
 import { Badge, Button, Card, EmptyState, Select, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { buildSegments, getSelectionOffsets } from "../lib/selection";
+import { STANCE_LABELS, type Stance } from "../lib/types";
 
-export default function CodingPage({ coder }: { coder: string }) {
+export default function CodingPage({
+  coder,
+  stance,
+  sessionId,
+}: {
+  coder: string;
+  stance: Stance;
+  sessionId: string | null;
+}) {
   const { documentId } = useParams<{ documentId: string }>();
   const queryClient = useQueryClient();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -57,11 +66,15 @@ export default function CodingPage({ coder }: { coder: string }) {
         citationId: selectedCitationId!,
         codeId: selectedCodeId,
         coder: coder || "Anonyme",
+        stance,
+        sessionId,
         memo: memo || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["coding-events", selectedCitationId] });
       queryClient.invalidateQueries({ queryKey: ["audit"] });
+      queryClient.invalidateQueries({ queryKey: ["chain"] });
+      queryClient.invalidateQueries({ queryKey: ["compare"] });
       setSelectedCodeId("");
       setMemo("");
     },
@@ -72,6 +85,8 @@ export default function CodingPage({ coder }: { coder: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["coding-events", selectedCitationId] });
       queryClient.invalidateQueries({ queryKey: ["audit"] });
+      queryClient.invalidateQueries({ queryKey: ["chain"] });
+      queryClient.invalidateQueries({ queryKey: ["compare"] });
     },
   });
 
@@ -186,6 +201,7 @@ export default function CodingPage({ coder }: { coder: string }) {
                     return (
                       <div key={event.id} className="flex items-center justify-between rounded-sm border border-ink/12 px-2 py-1 text-sm">
                         <span>
+                          <Badge className="mr-2">passe {event.stance}</Badge>
                           {code ? `${code.code} — ${code.name}` : event.codeId}
                           {event.memo && <span className="ml-2 text-xs text-ink/45">· {event.memo}</span>}
                         </span>
@@ -198,6 +214,9 @@ export default function CodingPage({ coder }: { coder: string }) {
               </div>
 
               <div className="space-y-2 border-t border-ink/10 pt-3">
+                <p className="text-xs uppercase tracking-wide text-ink/45">
+                  Codage en passe {stance} — {STANCE_LABELS[stance]}
+                </p>
                 <Select value={selectedCodeId} onChange={(e) => setSelectedCodeId(e.target.value)}>
                   <option value="">Choisir un code…</option>
                   {codesQuery.data?.map((c) => (
