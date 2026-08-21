@@ -107,20 +107,46 @@ import sys,json;d=json.load(sys.stdin)
 print('   ✔ politique posée' if d.get('success')
       else '   ✖ '+str([e.get('message') for e in d.get('errors',[])]))"
 
-echo "== 4. vérification au bord =="
-sleep 5
-read -r code loc < <(curl -s -o /dev/null -D - -m 15 "https://$HOST/" \
-  | awk 'BEGIN{c="";l="-"} /^HTTP/{c=$2} tolower($1)=="location:"{l=$2} END{print c, l}')
-echo "   HTTP ${code:-?}   location: ${loc:--}"
-case "${code:-}" in
-  302|303) echo "   ✔ Access intercepte : redirection vers l'écran de connexion." ;;
-  200)     echo "   ✖ toujours 200 — politique non appliquée. Vérifiez le tableau de bord." ;;
-  *)       echo "   ? code inattendu — vérifiez AVANT de fermer cette session." ;;
-esac
+echo "== 4. vérification au bord, avec retour arrière automatique =="
+rollback() {
+  echo "   ↩ retour arrière : suppression de l'application $APP_ID"
+  api -X DELETE "$B/access/apps/$APP_ID" \
+    | python3 -c "
+import sys,json;d=json.load(sys.stdin)
+print('   ✔ application supprimée, le site est rendu à son état précédent' if d.get('success')
+      else '   ✖ ÉCHEC DU RETOUR ARRIÈRE — supprimez à la main : '+str([e.get('message') for e in d.get('errors',[])]))"
+}
 
+sleep 6
+HDRS=$(curl -s -o /dev/null -D - -m 20 "https://$HOST/" || true)
+code=$(printf '%s' "$HDRS" | awk '/^HTTP/{c=$2} END{print c}')
+loc=$(printf '%s' "$HDRS"  | awk 'tolower($1)=="location:"{print $2}' | tr -d '\r')
+echo "   HTTP ${code:-?}   location: ${loc:--}"
+
+if [ "${code:-}" != "302" ] && [ "${code:-}" != "303" ]; then
+  echo "   ✖ Access n'intercepte pas (attendu 302/303)."
+  rollback; exit 1
+fi
+
+# L'écran de connexion doit exister réellement : sans domaine d'équipe, la
+# redirection pointe vers un hôte qui ne répond pas — c'est exactement le cas
+# qu'on ne pouvait pas exclure d'avance.
+team=$(printf '%s' "$loc" | sed -E 's#^https?://([^/]+)/.*#\1#')
+echo "   domaine d'équipe visé : ${team:-?}"
+login=$(curl -s -o /dev/null -m 20 -w '%{http_code}' "https://$team/cdn-cgi/access/login/$HOST" || echo 000)
+echo "   écran de connexion : HTTP $login"
+if [ "$login" != "200" ]; then
+  echo "   ✖ l'écran de connexion ne répond pas — verrouillage évité."
+  rollback; exit 1
+fi
+
+echo "   ✔ Access actif et écran de connexion joignable."
 cat <<TXT
 
-Rollback :
+Connexion : PIN à usage unique envoyé à
+  ${EMAILS[*]}
+
+Rollback manuel :
   curl -X DELETE -H "Authorization: Bearer \$CF_API_TOKEN" \\
     "$B/access/apps/$APP_ID"
 
