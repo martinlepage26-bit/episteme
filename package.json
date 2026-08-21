@@ -1,0 +1,14 @@
+{
+  "name": "episteme",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n mongo,server,frontend -c blue,green,magenta \"docker compose up\" \"npm run dev --prefix server\" \"npm run dev --prefix frontend\"",
+    "db:up": "docker compose up -d mongo",
+    "db:down": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

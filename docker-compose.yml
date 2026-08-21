@@ -1,0 +1,14 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: episteme-mongo
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_DATABASE: episteme
+    volumes:
+      - episteme-mongo-data:/data/db
+
+volumes:
+  episteme-mongo-data:
