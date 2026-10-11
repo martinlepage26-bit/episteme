@@ -33,6 +33,23 @@ npm --prefix frontend run dev          # Frontend sur http://localhost:5173
 L'API écoute sur `http://localhost:4000/api`. Le frontend proxie `/api` vers ce port en
 développement (voir `frontend/vite.config.ts`).
 
+## Sonde `/api/status`
+
+`GET /api/status` est public. Il envoie un `ping` administrateur à MongoDB et
+attend au plus 2 secondes (`MONGO_PING_TIMEOUT_MS`).
+
+- **200** — MongoDB a répondu. `status` vaut `"ok"`.
+- **503** — MongoDB est injoignable, renvoie une erreur, ou ne répond pas à temps.
+  `status` vaut `"error"` et `dependencies.mongodb.error` nomme la cause
+  (`"mongodb unavailable"` ou `"mongodb timed out"`).
+
+Les deux réponses gardent `product`, `phase`, `authEnabled` et `accessEnabled`.
+Le détail du pilote (URI, pile) est journalisé côté serveur et n'est pas renvoyé.
+
+```bash
+npm test --prefix server
+```
+
 ## Structure
 
 ```

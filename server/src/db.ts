@@ -12,6 +12,26 @@ import type {
 const uri = process.env.MONGODB_URI ?? "mongodb://localhost:27018/episteme";
 const client = new MongoClient(uri);
 
+/**
+ * Délai de la sonde `/api/status`. Court pour qu'un MongoDB arrêté (disque
+ * plein, processus mort) fasse échouer la sonde au lieu de la laisser pendre
+ * jusqu'au `serverSelectionTimeoutMS` du pilote (30 s par défaut).
+ */
+export const MONGO_PING_TIMEOUT_MS = 2_000;
+
+export interface MongoAdminPing {
+  ping(options?: { timeoutMS?: number; maxTimeMS?: number }): Promise<unknown>;
+}
+
+/** `admin.ping` avec un délai côté pilote et côté serveur. */
+export function pingAdmin(admin: MongoAdminPing, timeoutMs: number): Promise<unknown> {
+  return admin.ping({ timeoutMS: timeoutMs, maxTimeMS: timeoutMs });
+}
+
+export function pingMongo(timeoutMs = MONGO_PING_TIMEOUT_MS): Promise<unknown> {
+  return pingAdmin(client.db().admin(), timeoutMs);
+}
+
 let connected = false;
 
 const db = client.db();

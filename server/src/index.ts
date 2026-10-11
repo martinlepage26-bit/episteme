@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { connectDb, ensureIndexes } from "./db.js";
+import { connectDb, ensureIndexes, pingMongo } from "./db.js";
 import { accessEnabled } from "./lib/accessJwt.js";
 import { authEnabled, requireAuth } from "./lib/auth.js";
 import { auditRouter } from "./routes/audit.js";
@@ -15,6 +15,7 @@ import { documentsRouter } from "./routes/documents.js";
 import { exportsRouter } from "./routes/exports.js";
 import { reconciliationsRouter } from "./routes/reconciliations.js";
 import { sessionsRouter } from "./routes/sessions.js";
+import { createStatusHandler } from "./routes/status.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");
@@ -38,9 +39,10 @@ app.set("trust proxy", "loopback");
 app.disable("x-powered-by");
 app.use(express.json({ limit: "10mb" }));
 
-app.get("/api/status", (_req, res) => {
-  res.json({ status: "ok", product: "Épistémè", phase: 2, authEnabled, accessEnabled });
-});
+app.get(
+  "/api/status",
+  createStatusHandler({ ping: pingMongo, authEnabled, accessEnabled }),
+);
 
 // Non protégé : c'est la porte d'entrée.
 app.use("/api/auth", authRouter);
