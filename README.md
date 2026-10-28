@@ -9,13 +9,13 @@
 ## Chaîne de travail
 
 ```mermaid
-flowchart TD
-  A["Document et citation"] --> B["Codage en posture A"]
-  A --> C["Codage en posture B"]
-  B --> D["Comparaison des lectures"]
+flowchart LR
+  A["Document et citation"] --> B["Posture A"]
+  A --> C["Posture B"]
+  B --> D["Comparaison"]
   C --> D
   D --> E["Réconciliation motivée"]
-  E --> F["Journal vérifiable et export"]
+  E --> F["Journal et export"]
 ```
 
 ## Ce que le projet démontre
