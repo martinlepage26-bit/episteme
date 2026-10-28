@@ -1,46 +1,48 @@
-# Épistémè
+# Épistémè — Codage qualitatif et traçabilité des interprétations
 
-Outil de codage qualitatif auditable. Voir `SPEC.md` (spécification complète) et `PRODUCT.md`
-(portée de cette itération, choix de stack, déploiement).
+Épistémè relie documents, citations, codes et mémos dans un espace de recherche qualitatif. Deux postures de lecture peuvent coexister sur un même extrait ; leurs divergences deviennent des objets de réconciliation explicites.
 
-**Live :** https://episteme.pharos-ai.ca (interim, CT920). Accès par phrase de passe — voir
-`PRODUCT.md`.
+*A qualitative-research workspace for evidence-linked coding, contrasting interpretations, and inspectable audit records.*
+
+**Stack :** React, TypeScript, Vite, Express, MongoDB et Docker.
+
+## Ce que le projet démontre
+
+- Une chaîne de travail : corpus → citation → codage → comparaison → réconciliation → export.
+- Des sessions qui fixent le codeur, la posture et le corpus.
+- Un journal dont les événements portent un rang, une empreinte précédente et une empreinte SHA-256.
+- Des exports qui rendent le raisonnement et les limites inspectables.
+
+## Parcours de lecture du code
+
+| Question | Source |
+| --- | --- |
+| Comment les événements sont-ils chaînés et vérifiés ? | [Journal d'audit](server/src/lib/audit.ts) |
+| Comment l'accès est-il contrôlé ? | [Authentification](server/src/lib/auth.ts) |
+| Comment comparer les lectures ? | [Comparaison](frontend/src/pages/ComparePage.tsx) |
+| Comment documenter une réconciliation ? | [Réconciliation](frontend/src/pages/ReconcilePage.tsx) |
+| Quelle portée a réellement été livrée ? | [État du produit et limites](PRODUCT.md), [spécification](SPEC.md) |
+
+Un bon scénario de démonstration utilise un court corpus fictif, applique deux lectures différentes au même extrait, motive une réconciliation, puis vérifie et exporte le journal.
 
 ## Démarrer en local
 
-Prérequis : Docker, Node.js 22+.
+Prérequis : Docker et Node.js 22+.
 
-```bash
-npm install                    # installe concurrently à la racine
+```sh
+npm install
 npm --prefix server install
 npm --prefix frontend install
-
-npm --prefix server run migrate  # chaîne les événements d'audit existants et crée les index
-npm run dev                      # lance MongoDB (docker), l'API (:4000) et le frontend (:5173)
+npm --prefix server run migrate
+npm run dev
 ```
 
-En local, l'authentification est inactive tant que `EPISTEME_PASSPHRASE` et
-`EPISTEME_SESSION_SECRET` sont absents de `server/.env` (voir `server/.env.example`).
+Effectuer les migrations uniquement dans un environnement de développement isolé. La configuration locale et les conditions d'authentification figurent dans le guide détaillé.
 
-Ou séparément, dans trois terminaux :
+## Limites à connaître
 
-```bash
-npm run db:up                          # MongoDB sur localhost:27018
-npm --prefix server run dev            # API sur http://localhost:4000
-npm --prefix frontend run dev          # Frontend sur http://localhost:5173
-```
+Le chaînage permet de détecter certaines modifications du journal ; il ne rend pas toute la base immuable. L'écriture métier et son événement d'audit ne sont pas transactionnels. Le verrou d'ajout sérialise un processus unique et doit être repensé pour plusieurs instances.
 
-L'API écoute sur `http://localhost:4000/api`. Le frontend proxie `/api` vers ce port en
-développement (voir `frontend/vite.config.ts`).
+Le dépôt ne fournit pas actuellement de suite de tests automatisés dédiée. Les vérifications et limites décrites dans `PRODUCT.md` ne remplacent pas une exécution reproductible de tests.
 
-## Structure
-
-```
-episteme/
-├── server/      API Node.js + TypeScript + Express + MongoDB
-│   └── src/lib/audit.ts    journal append-only chaîné en SHA-256
-├── frontend/    App React + TypeScript + Vite + Tailwind
-└── docker-compose.yml   MongoDB local (port 27018)
-```
-
-Écrans : `/corpus` `/coding/:id` `/codebook` `/compare` `/reconcile` `/audit` `/exports`.
+[Detailed setup and operating guide](https://github.com/martinlepage26-bit/episteme/blob/b817e7fbb91d5ef59b2167168135767425e1e6e1/README.md)
