@@ -6,6 +6,18 @@
 
 **Stack :** React, TypeScript, Vite, Express, MongoDB et Docker.
 
+## Chaîne de travail
+
+```mermaid
+flowchart TD
+  A["Document et citation"] --> B["Codage en posture A"]
+  A --> C["Codage en posture B"]
+  B --> D["Comparaison des lectures"]
+  C --> D
+  D --> E["Réconciliation motivée"]
+  E --> F["Journal vérifiable et export"]
+```
+
 ## Ce que le projet démontre
 
 - Une chaîne de travail : corpus → citation → codage → comparaison → réconciliation → export.
